@@ -11,6 +11,10 @@ app = FastAPI()
 @app.get("/")
 def root():
     return {"status": "Voice AI Detection API is running"}
+@app.get("/")
+def home():
+    return {"message": "Voice AI Detection API is live 🚀"}
+
 
 
 SUPPORTED_LANGUAGES = ["Tamil", "English", "Hindi", "Malayalam", "Telugu"]
