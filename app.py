@@ -4,6 +4,8 @@ from utils.audio_processing import base64_to_wav
 from utils.predictor import predict_audio
 from security.auth import verify_api_key
 import os
+print("🚀 FastAPI app starting...")
+
 
 app = FastAPI()
 
