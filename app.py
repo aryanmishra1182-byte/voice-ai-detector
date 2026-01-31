@@ -4,16 +4,27 @@ from utils.audio_processing import base64_to_wav
 from utils.predictor import predict_audio
 from security.auth import verify_api_key
 import os
+from fastapi.middleware.cors import CORSMiddleware
+
 print("🚀 FastAPI app starting...")
 
 
 app = FastAPI()
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],  # allow all sites (ok for project/demo)
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
 @app.get("/")
 def root():
     return {"status": "Voice AI Detection API is running"}
 @app.get("/")
 def home():
     return {"message": "Voice AI Detection API is live 🚀"}
+
 
 
 
