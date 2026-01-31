@@ -1,0 +1,179 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Voice AI Detector</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<style>
+  body {
+    background: linear-gradient(135deg, #0f172a, #1e293b);
+  }
+</style>
+</head>
+<body class="text-white min-h-screen flex items-center justify-center p-6">
+
+<div class="w-full max-w-3xl bg-white/10 backdrop-blur-lg rounded-2xl shadow-2xl p-8 space-y-6">
+
+  <h1 class="text-3xl font-bold text-center">🎙 Voice AI Detection System</h1>
+  <p class="text-center text-gray-300">Detect whether speech is Human or AI-Generated</p>
+
+  <!-- API Key -->
+  <div>
+    <label class="text-sm text-gray-300">API Key</label>
+    <input id="apiKey" type="password" placeholder="Enter your API key"
+      class="w-full mt-1 p-2 rounded bg-gray-800 border border-gray-600 focus:outline-none">
+  </div>
+
+  <!-- Language -->
+  <div>
+    <label class="text-sm text-gray-300">Language</label>
+    <select id="language"
+      class="w-full mt-1 p-2 rounded bg-gray-800 border border-gray-600">
+      <option>English</option>
+      <option>Tamil</option>
+      <option>Hindi</option>
+      <option>Malayalam</option>
+      <option>Telugu</option>
+    </select>
+  </div>
+
+  <!-- File Upload -->
+  <div id="dropZone"
+       class="border-2 border-dashed border-gray-500 rounded-lg p-6 text-center cursor-pointer hover:border-blue-400">
+    <p>📂 Drag & Drop MP3 file here or click to select</p>
+    <input type="file" id="audioFile" accept=".mp3" class="hidden">
+  </div>
+
+  <!-- Audio Preview -->
+  <audio id="audioPreview" controls class="w-full hidden"></audio>
+
+  <!-- Button -->
+  <button onclick="detectVoice()"
+    class="w-full bg-blue-600 hover:bg-blue-700 transition rounded-lg p-3 font-semibold">
+    🚀 Analyze Voice
+  </button>
+
+  <!-- Loading -->
+  <div id="loading" class="hidden text-center">
+    <p class="animate-pulse text-blue-300">Analyzing audio…</p>
+  </div>
+
+  <!-- Result Card -->
+  <div id="resultCard" class="hidden bg-gray-900/70 p-4 rounded-lg space-y-2">
+    <h2 class="text-xl font-semibold">🔍 Detection Result</h2>
+    <p><strong>Language:</strong> <span id="resLang"></span></p>
+    <p><strong>Classification:</strong> <span id="resClass"></span></p>
+
+    <div>
+      <p><strong>Confidence:</strong></p>
+      <div class="w-full bg-gray-700 rounded-full h-3">
+        <div id="confidenceBar" class="bg-green-500 h-3 rounded-full"></div>
+      </div>
+      <p id="resConf" class="text-sm text-gray-300 mt-1"></p>
+    </div>
+
+    <p><strong>Explanation:</strong> <span id="resExplain"></span></p>
+  </div>
+
+  <!-- Error -->
+  <div id="errorMsg" class="hidden text-red-400 text-center"></div>
+
+</div>
+
+<script>
+const dropZone = document.getElementById("dropZone");
+const fileInput = document.getElementById("audioFile");
+const audioPreview = document.getElementById("audioPreview");
+
+dropZone.addEventListener("click", () => fileInput.click());
+dropZone.addEventListener("dragover", e => e.preventDefault());
+dropZone.addEventListener("drop", e => {
+  e.preventDefault();
+  fileInput.files = e.dataTransfer.files;
+  previewAudio();
+});
+fileInput.addEventListener("change", previewAudio);
+
+function previewAudio() {
+  const file = fileInput.files[0];
+  if (!file) return;
+  audioPreview.src = URL.createObjectURL(file);
+  audioPreview.classList.remove("hidden");
+}
+
+async function detectVoice() {
+  const file = fileInput.files[0];
+  const apiKey = document.getElementById("apiKey").value;
+  const language = document.getElementById("language").value;
+
+  if (!file || !apiKey) {
+    showError("Please select file and enter API key");
+    return;
+  }
+
+  document.getElementById("loading").classList.remove("hidden");
+  document.getElementById("resultCard").classList.add("hidden");
+  document.getElementById("errorMsg").classList.add("hidden");
+
+  const base64 = await toBase64(file);
+
+  try {
+    const res = await fetch("/api/voice-detection", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "x-api-key": apiKey
+      },
+      body: JSON.stringify({
+        language,
+        audioFormat: "mp3",
+        audioBase64: base64
+      })
+    });
+
+    const data = await res.json();
+    document.getElementById("loading").classList.add("hidden");
+
+    if (!res.ok) {
+      showError(data.detail || "Error occurred");
+      return;
+    }
+
+    showResult(data);
+
+  } catch {
+    showError("Network error");
+  }
+}
+
+function showResult(data) {
+  document.getElementById("resultCard").classList.remove("hidden");
+  document.getElementById("resLang").innerText = data.language;
+  document.getElementById("resClass").innerText = data.classification;
+  document.getElementById("resExplain").innerText = data.explanation;
+
+  const conf = Math.round(data.confidenceScore * 100);
+  document.getElementById("resConf").innerText = conf + "%";
+  document.getElementById("confidenceBar").style.width = conf + "%";
+}
+
+function showError(msg) {
+  const err = document.getElementById("errorMsg");
+  err.innerText = msg;
+  err.classList.remove("hidden");
+  document.getElementById("loading").classList.add("hidden");
+}
+
+function toBase64(file) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.readAsDataURL(file);
+    reader.onload = () => resolve(reader.result.split(',')[1]);
+    reader.onerror = reject;
+  });
+}
+</script>
+
+</body>
+</html>
