@@ -1,22 +1,33 @@
-import numpy as np
 import joblib
-from utils.feature_extraction import extract_features
+import numpy as np
+import librosa
 
-# Load lightweight sklearn model
-model = joblib.load("model/voice_model.pkl")
+MODEL_PATH = "models/voice_detector.pkl"
+model = joblib.load(MODEL_PATH)
+
+def extract_features(file_path):
+    y, sr = librosa.load(file_path, sr=None)
+
+    mfcc = np.mean(librosa.feature.mfcc(y=y, sr=sr, n_mfcc=40).T, axis=0)
+    chroma = np.mean(librosa.feature.chroma_stft(y=y, sr=sr).T, axis=0)
+    spectral = np.mean(librosa.feature.spectral_contrast(y=y, sr=sr).T, axis=0)
+    zcr = np.mean(librosa.feature.zero_crossing_rate(y).T, axis=0)
+    rolloff = np.mean(librosa.feature.spectral_rolloff(y=y, sr=sr).T, axis=0)
+
+    return np.hstack([mfcc, chroma, spectral, zcr, rolloff])
 
 def predict_audio(file_path):
-    features = extract_features(file_path)
-    features = np.array(features).reshape(1, -1)
+    features = extract_features(file_path).reshape(1, -1)
+    pred = model.predict(features)[0]
+    prob = model.predict_proba(features)[0]
 
-    probs = model.predict_proba(features)[0]
-    confidence = float(max(probs))
-    label = "AI_GENERATED" if probs[1] > probs[0] else "HUMAN"
+    confidence = prob[pred]
 
-    explanation = (
-        "Unnaturally stable acoustic patterns detected"
-        if label == "AI_GENERATED"
-        else "Natural human pitch variations detected"
-    )
+    if pred == 1:
+        label = "AI_GENERATED"
+        explanation = "Synthetic speech patterns and spectral smoothness detected"
+    else:
+        label = "HUMAN"
+        explanation = "Natural pitch variation and human vocal irregularities detected"
 
-    return label, confidence, explanation
+    return label, float(confidence), explanation
