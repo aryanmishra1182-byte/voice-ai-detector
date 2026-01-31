@@ -1,11 +1,10 @@
 import os
-from fastapi import HTTPException
+from fastapi import Header, HTTPException
 
 API_KEY = os.getenv("API_KEY")
 
-def verify_api_key(api_key: str):
+def verify_api_key(x_api_key: str = Header(...)):
     if not API_KEY:
         raise HTTPException(status_code=500, detail="API key not configured on server")
-
-    if api_key != API_KEY:
+    if x_api_key != API_KEY:
         raise HTTPException(status_code=401, detail="Invalid API key")

@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <title>Voice AI Detector</title>
+    <title>🎙 Voice AI Detector</title>
     <style>
         body {
             font-family: Arial, sans-serif;
@@ -11,89 +11,125 @@
             padding: 40px;
         }
         .card {
-            background: #1f2a40;
-            padding: 25px;
+            background: #1e2a38;
+            padding: 30px;
             border-radius: 12px;
-            width: 400px;
+            width: 420px;
             margin: auto;
-            box-shadow: 0 0 20px rgba(0,0,0,0.5);
-        }
-        input, select, button {
-            width: 100%;
-            padding: 10px;
-            margin-top: 12px;
-            border-radius: 6px;
-            border: none;
+            box-shadow: 0 0 15px rgba(0,0,0,0.5);
         }
         button {
+            padding: 10px 20px;
+            border-radius: 8px;
+            border: none;
+            cursor: pointer;
+            font-weight: bold;
+            margin-top: 15px;
             background: #00c6ff;
             color: black;
-            font-weight: bold;
-            cursor: pointer;
         }
-        .result {
+        select, input {
+            padding: 8px;
+            border-radius: 6px;
+            border: none;
+            margin: 10px 0;
+            width: 100%;
+        }
+        #result {
             margin-top: 20px;
-            padding: 15px;
+            text-align: left;
+            white-space: pre-wrap;
             background: #2c3e50;
+            padding: 12px;
             border-radius: 8px;
         }
     </style>
 </head>
 <body>
 
-<h1>🎙️ Voice AI Detector</h1>
 <div class="card">
-    <input type="text" id="apiKey" placeholder="Enter API Key" />
+    <h2>🎙 Voice AI Detector</h2>
 
+    <input type="password" id="apiKey" placeholder="Enter API Key" />
+    <input type="file" id="audioFile" accept=".mp3" />
+    
     <select id="language">
         <option>English</option>
         <option>Hindi</option>
         <option>Tamil</option>
-        <option>Telugu</option>
         <option>Malayalam</option>
+        <option>Telugu</option>
     </select>
 
-    <input type="file" id="audioFile" accept=".mp3"/>
+    <button onclick="detectVoice()">Detect Voice</button>
 
-    <button onclick="analyze()">Detect Voice</button>
-
-    <div class="result" id="result">Result will appear here</div>
+    <div id="result">Result will appear here...</div>
 </div>
 
 <script>
-async function analyze() {
-    const file = document.getElementById("audioFile").files[0];
+async function detectVoice() {
+    const fileInput = document.getElementById("audioFile");
     const apiKey = document.getElementById("apiKey").value;
-    const language = document.getElementById("language").value;
+    const resultDiv = document.getElementById("result");
 
-    if (!file || !apiKey) {
-        alert("Upload file and enter API key");
+    if (!fileInput.files.length || !apiKey) {
+        resultDiv.innerHTML = "❌ Upload MP3 and enter API key.";
         return;
     }
 
+    resultDiv.innerHTML = "⏳ Processing...";
+
+    const file = fileInput.files[0];
     const reader = new FileReader();
+
     reader.onload = async function() {
-        const base64Audio = reader.result.split(",")[1];
+        try {
+            const base64 = reader.result.split(',')[1];
 
-        const response = await fetch("/api/voice-detection", {
-            method: "POST",
-            headers: {
-                "Content-Type": "application/json",
-                "x-api-key": apiKey
-            },
-            body: JSON.stringify({
-                language: language,
-                audioFormat: "mp3",
-                audioBase64: base64Audio
-            })
-        });
+            const response = await fetch("/api/voice-detection", {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json",
+                    "x-api-key": apiKey
+                },
+                body: JSON.stringify({
+                    language: document.getElementById("language").value,
+                    audioFormat: "mp3",
+                    audioBase64: base64
+                })
+            });
 
-        const data = await response.json();
-        document.getElementById("result").innerText =
-            "Classification: " + data.classification +
-            "\nConfidence: " + data.confidenceScore +
-            "\nExplanation: " + data.explanation;
+            const data = await response.json();
+
+            if (response.ok) {
+                resultDiv.innerHTML = `
+🔍 Analysis Result
+
+Language: ${data.analysis.language}
+Voice Type: ${data.analysis.voice_type}
+Confidence Score: ${data.analysis.confidence_score}
+
+Verdict: ${data.analysis.verdict}
+
+Explanation:
+${data.analysis.explanation}
+
+Audio Features:
+• Pitch Stability: ${data.analysis.audio_features.pitch_stability}
+• Background Noise: ${data.analysis.audio_features.background_noise}
+• Speech Variability: ${data.analysis.audio_features.speech_variability}
+• Articulation Pattern: ${data.analysis.audio_features.articulation_pattern}
+
+⏱ Processing Time: ${data.processing.processing_time_ms} ms
+                `;
+            } else {
+                resultDiv.innerHTML = "❌ Error: " + JSON.stringify(data);
+            }
+        } catch (err) {
+            resultDiv.innerHTML = "❌ Network error. Check console.";
+        }
     };
+
     reader.readAsDataURL(file);
 }
 </script>
