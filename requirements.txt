@@ -1,8 +1,8 @@
 fastapi
 uvicorn
-torch
 librosa
 numpy
 scikit-learn
 pydub
 soundfile
+joblib
