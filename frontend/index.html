@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Voice AI Detector</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background: linear-gradient(135deg, #141e30, #243b55);
+            color: white;
+            text-align: center;
+            padding: 40px;
+        }
+        .card {
+            background: #1f2a40;
+            padding: 25px;
+            border-radius: 12px;
+            width: 400px;
+            margin: auto;
+            box-shadow: 0 0 20px rgba(0,0,0,0.5);
+        }
+        input, select, button {
+            width: 100%;
+            padding: 10px;
+            margin-top: 12px;
+            border-radius: 6px;
+            border: none;
+        }
+        button {
+            background: #00c6ff;
+            color: black;
+            font-weight: bold;
+            cursor: pointer;
+        }
+        .result {
+            margin-top: 20px;
+            padding: 15px;
+            background: #2c3e50;
+            border-radius: 8px;
+        }
+    </style>
+</head>
+<body>
+
+<h1>🎙️ Voice AI Detector</h1>
+<div class="card">
+    <input type="text" id="apiKey" placeholder="Enter API Key" />
+
+    <select id="language">
+        <option>English</option>
+        <option>Hindi</option>
+        <option>Tamil</option>
+        <option>Telugu</option>
+        <option>Malayalam</option>
+    </select>
+
+    <input type="file" id="audioFile" accept=".mp3"/>
+
+    <button onclick="analyze()">Detect Voice</button>
+
+    <div class="result" id="result">Result will appear here</div>
+</div>
+
+<script>
+async function analyze() {
+    const file = document.getElementById("audioFile").files[0];
+    const apiKey = document.getElementById("apiKey").value;
+    const language = document.getElementById("language").value;
+
+    if (!file || !apiKey) {
+        alert("Upload file and enter API key");
+        return;
+    }
+
+    const reader = new FileReader();
+    reader.onload = async function() {
+        const base64Audio = reader.result.split(",")[1];
+
+        const response = await fetch("/api/voice-detection", {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json",
+                "x-api-key": apiKey
+            },
+            body: JSON.stringify({
+                language: language,
+                audioFormat: "mp3",
+                audioBase64: base64Audio
+            })
+        });
+
+        const data = await response.json();
+        document.getElementById("result").innerText =
+            "Classification: " + data.classification +
+            "\nConfidence: " + data.confidenceScore +
+            "\nExplanation: " + data.explanation;
+    };
+    reader.readAsDataURL(file);
+}
+</script>
+
+</body>
+</html>

@@ -1,3 +1,5 @@
+from fastapi.responses import FileResponse
+import os
 from fastapi import FastAPI, HTTPException, Security
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.security import APIKeyHeader
@@ -26,8 +28,9 @@ api_key_header = APIKeyHeader(name="x-api-key", auto_error=False)
 
 # 🌐 Root route
 @app.get("/")
-def root():
-    return {"status": "Voice AI Detection API is running 🚀"}
+def serve_frontend():
+    return FileResponse(os.path.join("frontend", "index.html"))
+
 
 SUPPORTED_LANGUAGES = ["Tamil", "English", "Hindi", "Malayalam", "Telugu"]
 
