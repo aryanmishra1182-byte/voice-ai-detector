@@ -9,20 +9,32 @@ from sklearn.metrics import classification_report, accuracy_score
 DATASET_PATH = "dataset"
 MODEL_PATH = "models/voice_detector.pkl"
 
+
 def extract_features(file_path):
     try:
         y, sr = librosa.load(file_path, sr=None)
 
+        # ❌ Skip very short clips (bad for training)
+        if len(y) < sr:
+            return None
+
+        # ✂ Trim very long clips (keep first 8 sec)
+        if len(y) > sr * 8:
+            y = y[:sr * 8]
+
+        # ===== FEATURE SET (61 FEATURES) =====
         mfcc = np.mean(librosa.feature.mfcc(y=y, sr=sr, n_mfcc=40).T, axis=0)
         chroma = np.mean(librosa.feature.chroma_stft(y=y, sr=sr).T, axis=0)
-        spectral = np.mean(librosa.feature.spectral_contrast(y=y, sr=sr).T, axis=0)
+        contrast = np.mean(librosa.feature.spectral_contrast(y=y, sr=sr).T, axis=0)
         zcr = np.mean(librosa.feature.zero_crossing_rate(y).T, axis=0)
         rolloff = np.mean(librosa.feature.spectral_rolloff(y=y, sr=sr).T, axis=0)
 
-        return np.hstack([mfcc, chroma, spectral, zcr, rolloff])
+        return np.hstack([mfcc, chroma, contrast, zcr, rolloff])
+
     except Exception as e:
         print("Error processing:", file_path, e)
         return None
+
 
 features = []
 labels = []
@@ -46,17 +58,19 @@ X = np.array(features)
 y = np.array(labels)
 
 print("Total samples:", len(X))
-print("Human samples:", np.sum(y==0))
-print("AI samples:", np.sum(y==1))
+print("Human samples:", np.sum(y == 0))
+print("AI samples:", np.sum(y == 1))
 
 if len(set(y)) < 2:
     print("❌ ERROR: Need both HUMAN and AI samples")
     exit()
 
-X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42, stratify=y)
+X_train, X_test, y_train, y_test = train_test_split(
+    X, y, test_size=0.2, random_state=42, stratify=y
+)
 
 print("🧠 Training model...")
-model = RandomForestClassifier(n_estimators=200, random_state=42)
+model = RandomForestClassifier(n_estimators=300, random_state=42)
 model.fit(X_train, y_train)
 
 preds = model.predict(X_test)
